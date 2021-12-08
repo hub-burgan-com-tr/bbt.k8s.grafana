@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: renderer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: renderer
+  template:
+    metadata:
+      name: renderer
+      labels:
+        app: renderer
+    spec:
+      containers:
+      - name: renderer
+        image: grafana/grafana-image-renderer:latest
+        ports:
+        - name: renderer
+          containerPort: 8081
+        resources:
+          limits:
+            memory: "1Gi"
+            cpu: "100m"
+          requests: 
+            memory: 100M
+            cpu: "50m"

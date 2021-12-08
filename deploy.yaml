@@ -1,0 +1,77 @@
+#oc create configmap cert --from-file=cert.pem -n your-namespace
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      name: grafana
+      labels:
+        app: grafana
+    spec:
+#      serviceAccountName: grafana-anyuid
+# Required to install packages with apt.  
+#      securityContext:
+#        runAsUser: 0
+      containers:
+      - name: grafana
+        image: grafana/grafana:8.2.4-ubuntu
+        ports:
+        - name: grafana
+          containerPort: 3000
+        env:
+          - name: http_proxy
+            value: 'http://192.x.x.x:80'
+          - name: https_proxy
+            value: 'https://192.x.x.x:443'
+          - name: no_proxy
+            value: 'prometheus,renderer'
+          - name: GF_RENDERING_SERVER_URL
+            value: 'http://renderer:8081/render'
+          - name: GF_RENDERING_CALLBACK_URL
+            value: 'http://grafana:3000/'
+          - name: GF_LOG_FILTERS
+            value: 'rendering:debug'
+        resources:
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+          requests: 
+            memory: 100M
+            cpu: "50m"
+        volumeMounts:
+          - name: grafana-storage
+            mountPath: /var/lib/grafana
+          - name: grafana-datasources
+            mountPath: /etc/grafana/provisioning/datasources
+            readOnly: false
+          - name: grafana-config
+            mountPath: /etc/grafana/grafana.ini
+            subPath: grafana.ini
+          - name: cert
+            mountPath: /opt/certs/cert.pem
+            subPath: cert.pem
+          - name: grafana-config-ldap
+            mountPath: /etc/grafana/ldap.toml
+            subPath: ldap.toml
+      volumes:
+        - name: grafana-storage
+          persistentVolumeClaim:
+            claimName: grafana
+        - name: grafana-datasources
+          configMap:
+              name: grafana-datasources
+        - name: grafana-config
+          configMap:
+              name: grafana-config
+        - name: cert
+          configMap:
+            name: cert
+        - name: grafana-config-ldap
+          configMap:
+              name: grafana-config-ldap
